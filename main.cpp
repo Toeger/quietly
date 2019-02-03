@@ -114,28 +114,29 @@ int main(int argc, char *argv[]) {
 	}
 	std::string data;
 	constexpr auto chunk_size = 1024;
+	std::string current_line;
 	for (char buffer[chunk_size]; const auto bytes_read = ::read(read_channel, buffer, chunk_size);) {
 		if (bytes_read <= 0) {
 			::close(read_channel);
 			break;
 		}
 		data.append(buffer, bytes_read);
-		[&] {
-			for (int i = 0; i < bytes_read; i++) {
-				if (buffer[i] == '\r') {
-					std::cout << std::flush;
-					std::cout << "\r\033[K";
-					if (i + 2 == bytes_read) {
-						return;
-					} else {
-						i += 1; //skip following '\n'
-					}
-				} else {
-					std::cout << buffer[i];
+		for (int i = 0; i < bytes_read; i++) {
+			if (buffer[i] == '\n') {
+				if (current_line == "\r") {
+					current_line.clear();
 				}
+				if (current_line.empty()) {
+					continue; // no point printing empty lines
+				}
+				if (current_line.back() == '\r') {
+					current_line.pop_back();
+				}
+				std::cout << "\r\033[K" << current_line << std::flush;
+			} else {
+				std::cout << buffer[i];
 			}
-			std::cout << std::flush;
-		}();
+		}
 	}
 	int status;
 	while (wait(&status) != child_pid)
