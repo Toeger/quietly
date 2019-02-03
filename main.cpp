@@ -61,11 +61,16 @@ char **get_exec_args(char *argv[]) {
 	return argv + 1;
 }
 
+static void broken_pipe_signal_handler(int) {
+	//don't do anything in the handler, it just exists so the program doesn't get killed when reading or writing a pipe fails and instead receives an error code
+}
+
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
 		std::cout << "Usage: " << argv[0] << " [program] [args...]\n";
 		return 0;
 	}
+	signal(SIGPIPE, &broken_pipe_signal_handler);
 	termios terminal_settings = get_termios_settings();
 	winsize window_size;
 	std::array<int, 2> file_descriptors;
