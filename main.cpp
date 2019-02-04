@@ -11,8 +11,6 @@
 #include <unistd.h>
 #include <vector>
 
-using std::literals::string_view_literals::operator""sv;
-
 static termios get_termios_settings() {
 	termios terminal_settings{};
 	//TODO: figure out why we cannot simply use cfmakeraw(&terminal_settings);
@@ -43,31 +41,13 @@ static termios get_termios_settings() {
 	return terminal_settings;
 }
 
-char **get_exec_args(char *argv[]) {
-	if (argv[1] == "-sh"sv) {
-		//we are supposed to start the program in a shell
-		static std::string command;
-		for (char **arg = argv + 2; *arg != nullptr; arg++) {
-			command += *arg;
-			command += ' ';
-		}
-		command += "| 2>&1";
-		static char sh[] = "/bin/sh";
-		static char mc[] = "-c";
-		static char *args[] = {sh, mc, command.data(), nullptr};
-		return args;
-	}
-	//not a shell, just start the program
-	return argv + 1;
-}
-
 static void broken_pipe_signal_handler(int) {
 	//don't do anything in the handler, it just exists so the program doesn't get killed when reading or writing a pipe fails and instead receives an error code
 }
 
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
-		std::cout << "Usage: " << argv[0] << " [program] [args...]\n";
+		std::cout << "Usage: quietly [program] [args...]\n";
 		return 0;
 	}
 	signal(SIGPIPE, &broken_pipe_signal_handler);
@@ -103,8 +83,7 @@ int main(int argc, char *argv[]) {
 		dup2(write_channel, STDOUT_FILENO);
 		dup2(write_channel, STDERR_FILENO);
 
-		auto exec_args = get_exec_args(argv);
-		execvp(*exec_args, exec_args);
+		execvp(argv[1], argv + 1);
 		exit(-1);
 	}
 
